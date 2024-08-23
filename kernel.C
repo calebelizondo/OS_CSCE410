@@ -33,13 +33,13 @@ int main()
   SimpleConsole::puts("Initialized console.\n");
   SimpleConsole::puts("\n");
 
-  SimpleConsole::puts("Replace the following <NAME> field with your name.\n");
-  SimpleConsole::puts("After your are done admiring your output, you can shutdown this 'machine'.\n");
+  //SimpleConsole::puts("Replace the following <NAME> field with your name.\n");
+  //SimpleConsole::puts("After your are done admiring your output, you can shutdown this 'machine'.\n");
   SimpleConsole::puts("\n");
   SimpleConsole::puts("WELCOME TO MY KERNEL!\n");
-  SimpleConsole::puts("      ");
+  SimpleConsole::puts(">>>");
   SimpleConsole::set_TextColor(GREEN, RED);
-  SimpleConsole::puts("<NAME>\n");
+  SimpleConsole::puts("Caleb\n");
   
   /* -- LOOP FOREVER! */
   for(;;);
