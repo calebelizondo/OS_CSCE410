@@ -21,30 +21,46 @@ clean:
 
 run:
 	qemu-system-x86_64 -kernel kernel.bin -serial stdio
-	
+
 debug:
 	qemu-system-x86_64 -s -S -kernel kernel.bin
-	
+
 # ==== KERNEL ENTRY POINT ====
 
-start.o: start.asm
+start.o: start.asm 
 	$(AS) -f elf -o start.o start.asm
 
-# ==== UTILITIES ====
-
-utils.o: utils.H utils.C
+utils.o: utils.C utils.H
 	$(GCC) $(GCC_OPTIONS) -c -o utils.o utils.C
 
-# ==== DEVICES ====
+assert.o: assert.C assert.H
+	$(GCC) $(GCC_OPTIONS) -c -o assert.o assert.C
 
-simple_console.o: simple_console.H simple_console.C
-	$(GCC) $(GCC_OPTIONS) -c -o simple_console.o simple_console.C
+# ==== VARIOUS LOW-LEVEL STUFF =====
 
-# ==== KERNEL MAIN FILE ====
+machine.o: machine.C machine.H
+	$(GCC) $(GCC_OPTIONS) -c -o machine.o machine.C
 
-kernel.o: kernel.C
+machine_low.o: machine_low.asm machine_low.H
+	$(AS) -f elf -o machine_low.o machine_low.asm
+
+# ==== DEVICES =====
+
+console.o: console.C console.H
+	$(GCC) $(GCC_OPTIONS) -c -o console.o console.C
+
+# ==== MEMORY =====
+
+cont_frame_pool.o: cont_frame_pool.C cont_frame_pool.H
+	$(GCC) $(GCC_OPTIONS) -c -o cont_frame_pool.o cont_frame_pool.C
+
+# ==== KERNEL MAIN FILE =====
+
+kernel.o: kernel.C console.H 
 	$(GCC) $(GCC_OPTIONS) -c -o kernel.o kernel.C
 
-kernel.bin: start.o kernel.o simple_console.o utils.o  linker.ld
-	$(LD) -melf_i386 -T linker.ld -o kernel.bin start.o kernel.o simple_console.o utils.o
-
+kernel.bin: start.o utils.o kernel.o assert.o console.o \
+   cont_frame_pool.o machine.o machine_low.o  
+	$(LD) -melf_i386 -T linker.ld -o kernel.bin start.o utils.o \
+   kernel.o assert.o console.o \
+   cont_frame_pool.o  machine.o machine_low.o 

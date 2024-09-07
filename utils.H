@@ -2,17 +2,19 @@
      File        : utils.H
 
      Author      : Riccardo Bettati
-     Modified    : 2024/07/06
+     Modified    : 2017/05/02
 
-     Description : Various utility functions (e.g. abort, memory and 
+     Description : Various definitions (NULL) and
+                   utility functions (e.g. abort, memory and 
                    string functions).
 */
 
-#ifndef _utils_H_
-#define _utils_H_
+#ifndef _utils_h_
+#define _utils_h_
 
 /*---------------------------------------------------------------*/
 /* GENERAL CONSTANTS */
+/*---------------------------------------------------------------*/
 
 #ifndef NULL
 #   define NULL 0
@@ -20,26 +22,27 @@
 
 /*---------------------------------------------------------------*/
 /* ABORT */
+/*---------------------------------------------------------------*/
 
 void abort();
 /* Stop execution. */
 
 /*---------------------------------------------------------------*/
 /* SIMPLE MEMORY OPERATIONS */
+/*---------------------------------------------------------------*/
 
-char * memcpy(char * _dest, const char * _src, const int _count);
+void *memcpy(void *dest, const void *src, int count);
 /* Copy _count bytes from _src to _dest. (No check for uverlapping) */
 
-char *memset(char * _dest, char _val, const int _count);
+void *memset(void *dest, char val, int count);
 /* Set _count bytes to value _val, starting from location _dest. */
 
-unsigned short *memsetw(      unsigned short * _dest, 
-                        const unsigned short   _val, 
-                        const          int     _count);
+unsigned short *memsetw(unsigned short *dest, unsigned short val, int count);
 /* Same as above, but operations are 16-bit wide. */
 
 /*---------------------------------------------------------------*/
 /* SIMPLE STRING OPERATIONS (STRINGS ARE NULL-TERMINATED) */
+/*---------------------------------------------------------------*/
 
 int strlen(const char * _str);
 /* Determine the length of null-terminated string. */
@@ -52,16 +55,6 @@ void int2str(int _num, char * _str);
 
 void uint2str(unsigned int _num, char * _str);
 /* Convert unsigned int to null-terminated string. */
-
-/*---------------------------------------------------------------*/
-/* PORT I/O OPERATIONS */
-
-char inportb(unsigned short _port);
-/* Read data from input port _port.*/
-
-void outportb(unsigned short _port, char _data);
-/* Write _data to output port _port.*/
-
 
 #endif
 
