@@ -48,6 +48,7 @@ private:
     unsigned long   base_frame_no; // Where does the frame pool start in phys mem?
     unsigned long   nframes;       // Size of the frame pool
     unsigned long   info_frame_no; // Where do we store the management information?
+    unsigned long   n_info_frames;
 
     static const unsigned int maxPools;
     static unsigned int npools;
@@ -59,7 +60,7 @@ private:
     FrameState get_state(unsigned long _frame_no);
     void set_state(unsigned long _frame_no, FrameState _state);
     
-    void release_frame_sequence(unsigned long _first_frame_no);
+    void _release_frames(unsigned long _first_frame_no);
     
     
 public:

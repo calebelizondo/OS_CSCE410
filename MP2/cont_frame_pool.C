@@ -137,14 +137,16 @@ ContFramePool::ContFramePool(unsigned long _base_frame_no,
 {
     assert(_n_frames <= FRAME_SIZE * 2);
 
+    n_info_frames = needed_info_frames(nframes);
+
     if (info_frame_no == 0) bitmap = (unsigned char *) (base_frame_no * FRAME_SIZE);
     else bitmap = (unsigned char *) (info_frame_no * FRAME_SIZE);
 
-    for (int fno = 0; fno < _n_frames; fno++) bitmap[fno] = 0;
+    for (int fno = 0; fno < _n_frames; fno++) set_state(fno, FrameState::Free);
     
     if (_info_frame_no == 0) {
-        bitmap[0] = 2;
-        nframes--;
+        set_state(0, FrameState::Used);
+        nFreeFrames--;
     }
 
     pools[npools] = this;
@@ -158,9 +160,9 @@ unsigned long ContFramePool::get_frames(unsigned int _n_frames)
     if (nFreeFrames - _n_frames < 0) return 0;
 
     for (unsigned int fno = base_frame_no; fno < base_frame_no + nframes; fno++) {
-        if (bitmap[fno] == 0) {
+        if (get_state(fno) == FrameState::Free) {
             for (unsigned int tailfno = fno; tailfno < fno + _n_frames; tailfno++) {
-                if (bitmap[tailfno] == 2 || bitmap[tailfno] == 1) {
+                if (get_state(tailfno) == FrameState::HoS || get_state(tailfno) == FrameState::Used) {
                     break;
                 }
             }
@@ -176,35 +178,42 @@ unsigned long ContFramePool::get_frames(unsigned int _n_frames)
 void ContFramePool::mark_inaccessible(unsigned long _base_frame_no,
                                       unsigned long _n_frames)
 {
-    
-
     for(int fno = base_frame_no; fno < _base_frame_no + _n_frames; fno++) {
         set_state(fno - this->base_frame_no, FrameState::Used);
     }
 
     set_state(_base_frame_no, FrameState::HoS);
-    nFreeFrames -= _n_frames;
+    nFreeFrames -= _base_frame_no - _n_frames;
 }
 
-void ContFramePool::release_frame_sequence(unsigned long _first_frame_no)
+void ContFramePool::_release_frames(unsigned long _first_frame_no)
 {
     set_state(_first_frame_no, FrameState::Free);
     unsigned long fno = _first_frame_no + 1;
-    nFreeFrames += 1;
+    nFreeFrames -= 1;
 
-    while (fno < base_frame_no + nframes && (get_state(fno) != FrameState::HoS || get_state(fno) != FrameState::Used)) {
+    while (fno < base_frame_no + nframes && get_state(fno) != FrameState::HoS) {
         set_state(fno, FrameState::Free);
-        nFreeFrames += 1;
+        nFreeFrames -= 1;
     }
 }
 
 void ContFramePool::release_frames(unsigned long _first_frame_no)
 {
 
-    for (ContFramePool* pool : pools) {
+    /*
+    for (ContFramePool* pool : framePools) {
         if (_first_frame_no > pool->base_frame_no && 
             _first_frame_no < pool->base_frame_no + pool->nframes) {
             pool->release_frame_sequence(_first_frame_no);
+        }
+    }
+    */
+
+    for (ContFramePool* pool : pools) {
+        if (_first_frame_no > pool->base_frame_no && 
+            _first_frame_no < pool->base_frame_no + pool->nframes) {
+            pool->_release_frames(_first_frame_no);
             break;
         }
     }
@@ -225,16 +234,16 @@ unsigned long ContFramePool::needed_info_frames(unsigned long _n_frames)
     */
 }
 
-ContFramePool::FrameState ContFramePool::get_state(unsigned long _frame_no) {
+ContFramePool::FrameState ContFramePool::get_state(unsigned long _frame_no) {        
 
-    unsigned char state = bitmap[_frame_no];
+    unsigned char state_bits = bitmap[_frame_no];
 
-    switch (state) {
-        case 0:
-            return FrameState::Free;
-        case 1:
+    switch (state_bits) {
+        case 0b00:
             return FrameState::Used;
-        case 2:
+        case 0b01:
+            return FrameState::Free;
+        case 0b10:
             return FrameState::HoS;
         default:
             return FrameState::Used; 
@@ -246,13 +255,13 @@ void ContFramePool::set_state(unsigned long _frame_no, FrameState _state) {
     unsigned char new_state_bits = 0;
     switch (_state) {
         case FrameState::Used:
-            new_state_bits = 1;
+            new_state_bits = 0b00;
             break;
         case FrameState::Free:
-            new_state_bits = 0;
+            new_state_bits = 0b01;
             break;
         case FrameState::HoS:
-            new_state_bits = 2;
+            new_state_bits = 0b10;
             break;
     }
 
