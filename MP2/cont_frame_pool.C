@@ -1,8 +1,8 @@
 /*
  File: ContFramePool.C
  
- Author:
- Date  : 
+ Author: Caleb Elizondo
+ Date  : 9/15/2023
  
  */
 
@@ -136,6 +136,7 @@ ContFramePool::ContFramePool(unsigned long _base_frame_no,
     base_frame_no(_base_frame_no), nframes(_n_frames), info_frame_no(_info_frame_no), nFreeFrames(_n_frames)
 {
     assert(_n_frames <= FRAME_SIZE * 2);
+    assert(npools != maxPools);
 
     n_info_frames = needed_info_frames(nframes);
 
@@ -145,8 +146,14 @@ ContFramePool::ContFramePool(unsigned long _base_frame_no,
     for (int fno = 0; fno < _n_frames; fno++) set_state(fno, FrameState::Free);
     
     if (_info_frame_no == 0) {
-        set_state(0, FrameState::Used);
-        nFreeFrames--;
+
+        if (n_info_frames <= 1) {
+            set_state(0, FrameState::HoS);
+            nFreeFrames--;
+        }
+        else {
+            mark_inaccessible(0, n_info_frames);
+        }
     }
 
     pools[npools] = this;
@@ -157,61 +164,71 @@ ContFramePool::ContFramePool(unsigned long _base_frame_no,
 
 unsigned long ContFramePool::get_frames(unsigned int _n_frames)
 {
-    if (nFreeFrames - _n_frames < 0) return 0;
+    assert(nFreeFrames >= _n_frames);
 
-    for (unsigned int fno = base_frame_no; fno < base_frame_no + nframes; fno++) {
-        if (get_state(fno) == FrameState::Free) {
-            for (unsigned int tailfno = fno; tailfno < fno + _n_frames; tailfno++) {
-                if (get_state(tailfno) == FrameState::HoS || get_state(tailfno) == FrameState::Used) {
-                    break;
-                }
-            }
-            mark_inaccessible(fno, _n_frames);
-            return _n_frames;
+    unsigned int current_frame = base_frame_no;
+    unsigned int seq_start = 0;
+
+    while (seq_start <= nframes - _n_frames) {
+
+        while (seq_start < nframes && get_state(seq_start) != FrameState::Free) 
+            seq_start++;
+
+        unsigned int search_frame = seq_start;
+        unsigned int seq_length = 0;
+
+        while (search_frame < nframes && get_state(search_frame) == FrameState::Free && seq_length < _n_frames) {
+            search_frame++;
+            seq_length++;
         }
+
+        if (seq_length == _n_frames) {
+            current_frame += seq_start;
+            mark_inaccessible(current_frame, _n_frames);
+            return current_frame;
+        }
+
+        if (search_frame >= nframes) return 0;
     }
 
     return 0;
-
 }
 
 void ContFramePool::mark_inaccessible(unsigned long _base_frame_no,
                                       unsigned long _n_frames)
 {
-    for(int fno = base_frame_no; fno < _base_frame_no + _n_frames; fno++) {
-        set_state(fno - this->base_frame_no, FrameState::Used);
-    }
+    unsigned int base_index = _base_frame_no - base_frame_no;
+    assert(get_state(base_index) == FrameState::Free);
 
-    set_state(_base_frame_no, FrameState::HoS);
-    nFreeFrames -= _base_frame_no - _n_frames;
+    set_state(base_index, FrameState::HoS);
+	for (int fno = base_index + 1; fno < base_index + _n_frames; fno++) {
+        assert(get_state(fno) == FrameState::Free);
+        set_state(fno, FrameState::Used);
+	}
+	
+	nFreeFrames -= _n_frames;
+
 }
 
 void ContFramePool::_release_frames(unsigned long _first_frame_no)
 {
-    set_state(_first_frame_no, FrameState::Free);
-    unsigned long fno = _first_frame_no + 1;
-    nFreeFrames -= 1;
 
-    while (fno < base_frame_no + nframes && get_state(fno) != FrameState::HoS) {
+    set_state(_first_frame_no, FrameState::Free);
+    nFreeFrames += 1;
+
+    unsigned long fno = _first_frame_no + 1;
+    while (fno < base_frame_no + nframes && get_state(fno) == FrameState::Used) {
         set_state(fno, FrameState::Free);
-        nFreeFrames -= 1;
+        nFreeFrames += 1;
     }
 }
+
 
 void ContFramePool::release_frames(unsigned long _first_frame_no)
 {
 
-    /*
-    for (ContFramePool* pool : framePools) {
-        if (_first_frame_no > pool->base_frame_no && 
-            _first_frame_no < pool->base_frame_no + pool->nframes) {
-            pool->release_frame_sequence(_first_frame_no);
-        }
-    }
-    */
-
     for (ContFramePool* pool : pools) {
-        if (_first_frame_no > pool->base_frame_no && 
+        if (_first_frame_no >= pool->base_frame_no && 
             _first_frame_no < pool->base_frame_no + pool->nframes) {
             pool->_release_frames(_first_frame_no);
             break;
@@ -223,31 +240,21 @@ void ContFramePool::release_frames(unsigned long _first_frame_no)
 
 unsigned long ContFramePool::needed_info_frames(unsigned long _n_frames)
 {
-    // TODO: IMPLEMENTATION NEEEDED!
-    return 1;
-
-
-    /*
-    Console::puts("ContframePool::need_info_frames not implemented!\n");
-    assert(false);
-    return 0;
-    */
+	return (_n_frames) / FRAME_SIZE + (_n_frames % FRAME_SIZE > 0 ? 1 : 0);
 }
 
 ContFramePool::FrameState ContFramePool::get_state(unsigned long _frame_no) {        
 
-    unsigned char state_bits = bitmap[_frame_no];
-
-    switch (state_bits) {
-        case 0b00:
+    switch (bitmap[_frame_no]) {
+        case 0:
             return FrameState::Used;
-        case 0b01:
+        case 1:
             return FrameState::Free;
-        case 0b10:
+        case 2:
             return FrameState::HoS;
-        default:
-            return FrameState::Used; 
     }
+
+    return FrameState::Used;
 }
 
 void ContFramePool::set_state(unsigned long _frame_no, FrameState _state) {
@@ -255,13 +262,13 @@ void ContFramePool::set_state(unsigned long _frame_no, FrameState _state) {
     unsigned char new_state_bits = 0;
     switch (_state) {
         case FrameState::Used:
-            new_state_bits = 0b00;
+            new_state_bits = 0;
             break;
         case FrameState::Free:
-            new_state_bits = 0b01;
+            new_state_bits = 1;
             break;
         case FrameState::HoS:
-            new_state_bits = 0b10;
+            new_state_bits = 2;
             break;
     }
 
