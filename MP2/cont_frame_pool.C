@@ -140,11 +140,14 @@ ContFramePool::ContFramePool(unsigned long _base_frame_no,
 
     n_info_frames = needed_info_frames(nframes);
 
+    //allocate bitmap
     if (info_frame_no == 0) bitmap = (unsigned char *) (base_frame_no * FRAME_SIZE);
     else bitmap = (unsigned char *) (info_frame_no * FRAME_SIZE);
 
+    //initialize frames to free state
     for (int fno = 0; fno < _n_frames; fno++) set_state(fno, FrameState::Free);
     
+    //allocate info frames
     if (_info_frame_no == 0) {
 
         if (n_info_frames <= 1) {
@@ -156,6 +159,7 @@ ContFramePool::ContFramePool(unsigned long _base_frame_no,
         }
     }
 
+    //keep track of the current amount of frame pools
     pools[npools] = this;
     npools++;
 
@@ -169,19 +173,21 @@ unsigned long ContFramePool::get_frames(unsigned int _n_frames)
     unsigned int fno = base_frame_no;
     unsigned int seq_start = 0;
 
+    //while we haven't reached the end of the bitmap ...
     while (seq_start <= nframes - _n_frames) {
 
+        //identify the next available free frame
         while (seq_start < nframes && get_state(seq_start) != FrameState::Free) 
             seq_start++;
 
         unsigned int search_frame = seq_start;
         unsigned int seq_length = 0;
-
+        //see how long the sequence goes for ...
         while (search_frame < nframes && get_state(search_frame) == FrameState::Free && seq_length < _n_frames) {
             search_frame++;
             seq_length++;
         }
-
+        //if the sequence is big enough, allocate the space
         if (seq_length == _n_frames) {
             fno += seq_start;
             mark_inaccessible(fno, _n_frames);
@@ -200,6 +206,7 @@ void ContFramePool::mark_inaccessible(unsigned long _base_frame_no,
     unsigned int base_index = _base_frame_no - base_frame_no;
     assert(get_state(base_index) == FrameState::Free);
 
+    //iterate from base to end frame, mark each as used
     set_state(base_index, FrameState::HoS);
 	for (int fno = base_index + 1; fno < base_index + _n_frames; fno++) {
         assert(get_state(fno) == FrameState::Free);
@@ -215,7 +222,7 @@ void ContFramePool::_release_frames(unsigned long _first_frame_no)
 
     set_state(_first_frame_no, FrameState::Free);
     nFreeFrames += 1;
-
+    //iterate from start to end of sequence, free frames
     unsigned long fno = _first_frame_no + 1;
     while (fno < base_frame_no + nframes && get_state(fno) == FrameState::Used) {
         set_state(fno, FrameState::Free);
@@ -227,9 +234,12 @@ void ContFramePool::_release_frames(unsigned long _first_frame_no)
 void ContFramePool::release_frames(unsigned long _first_frame_no)
 {
 
+    //for each frame pool ...
     for (ContFramePool* pool : pools) {
+        //if the frame is within the pool's bounds
         if (_first_frame_no >= pool->base_frame_no && 
             _first_frame_no < pool->base_frame_no + pool->nframes) {
+            //release the frames
             pool->_release_frames(_first_frame_no);
             break;
         }
