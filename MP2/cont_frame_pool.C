@@ -166,7 +166,7 @@ unsigned long ContFramePool::get_frames(unsigned int _n_frames)
 {
     assert(nFreeFrames >= _n_frames);
 
-    unsigned int current_frame = base_frame_no;
+    unsigned int fno = base_frame_no;
     unsigned int seq_start = 0;
 
     while (seq_start <= nframes - _n_frames) {
@@ -183,9 +183,9 @@ unsigned long ContFramePool::get_frames(unsigned int _n_frames)
         }
 
         if (seq_length == _n_frames) {
-            current_frame += seq_start;
-            mark_inaccessible(current_frame, _n_frames);
-            return current_frame;
+            fno += seq_start;
+            mark_inaccessible(fno, _n_frames);
+            return fno;
         }
 
         if (search_frame >= nframes) return 0;
