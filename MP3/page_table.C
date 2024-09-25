@@ -16,7 +16,11 @@ void PageTable::init_paging(ContFramePool * _kernel_mem_pool,
                             ContFramePool * _process_mem_pool,
                             const unsigned long _shared_size)
 {
-   assert(false);
+   //assert(false);
+   PageTable::kernel_mem_pool = _kernel_mem_pool;
+   PageTable::process_mem_pool = _process_mem_pool;
+   PageTable::shared_size = _shared_size;
+
    Console::puts("Initialized Paging System\n");
 }
 
@@ -29,13 +33,18 @@ PageTable::PageTable()
 
 void PageTable::load()
 {
-   assert(false);
+   //assert(false);
+   PageTable::current_page_table = this;
+   write_cr3((unsigned long) page_directory);
+
    Console::puts("Loaded page table\n");
 }
 
 void PageTable::enable_paging()
 {
-   assert(false);
+   //assert(false);
+   PageTable::paging_enabled = 1;
+
    Console::puts("Enabled paging\n");
 }
 
