@@ -51,6 +51,15 @@ private:
   /* DATA FOR CURRENT PAGE TABLE */
   unsigned long        * page_directory;     /* where is page directory located? */
 
+   enum PAGE_STATE {KERNEL_READ_ABS = 0x000, KERNEL_READ_PRES = 0x001, 
+         KERNEL_WRITE_ABS = 0x010, KERNEL_WRITE_PRES = 0x011, 
+         USER_READ_ABS = 0x100, USER_READ_PRES = 0x001,
+         USER_WRITE_ABS = 0x110, USER_WRITE_PRES = 0x111};
+
+   static const int PAGE_WRITE = 0x010;
+   static const int PAGE_PRESENT = 0x001;
+   static const int PAGE_USER = 0x100;
+
 public:
   static const unsigned int PAGE_SIZE        = Machine::PAGE_SIZE; 
   /* in bytes */
