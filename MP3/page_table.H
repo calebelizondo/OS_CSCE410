@@ -51,14 +51,16 @@ private:
   /* DATA FOR CURRENT PAGE TABLE */
   unsigned long        * page_directory;     /* where is page directory located? */
 
-   enum PAGE_STATE {KERNEL_READ_ABS = 0x000, KERNEL_READ_PRES = 0x001, 
-         KERNEL_WRITE_ABS = 0x010, KERNEL_WRITE_PRES = 0x011, 
-         USER_READ_ABS = 0x100, USER_READ_PRES = 0x001,
-         USER_WRITE_ABS = 0x110, USER_WRITE_PRES = 0x111};
-
+   //used in bit-wise operations
    static const int PAGE_WRITE = 0x010;
    static const int PAGE_PRESENT = 0x001;
    static const int PAGE_USER = 0x100;
+
+   //private helper functions for fault handling
+   static void handle_protection_fault(REGS* r, unsigned long page_dir_offset, unsigned long page_table_offset);
+   static void handle_not_present_fault(unsigned long page_dir_offset, unsigned long page_table_offset);
+   static void allocate_page_table(unsigned long page_dir_offset, unsigned long page_table_offset);
+   static void allocate_page(unsigned long page_dir_offset, unsigned long page_table_offset);
 
 public:
   static const unsigned int PAGE_SIZE        = Machine::PAGE_SIZE; 
