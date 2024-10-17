@@ -16,7 +16,6 @@ void PageTable::init_paging(ContFramePool * _kernel_mem_pool,
                             ContFramePool * _process_mem_pool,
                             const unsigned long _shared_size)
 {
-   //assert(false);
    PageTable::kernel_mem_pool = _kernel_mem_pool;
    PageTable::process_mem_pool = _process_mem_pool;
    PageTable::shared_size = _shared_size;
@@ -125,7 +124,8 @@ void PageTable::allocate_page_table(unsigned long page_dir_offset, unsigned long
 
    //populate the table
    unsigned long* page_table = (unsigned long*)(new_frame * PAGE_SIZE);
-   current_page_table->page_directory[page_dir_offset] = (unsigned long)page_table | PAGE_PRESENT | PAGE_WRITE;
+   current_page_table->page_directory[page_dir_offset] = (unsigned long)page_table
+       | PAGE_PRESENT | PAGE_WRITE;
    for (int i = 0; i < ENTRIES_PER_PAGE; i++) {
       page_table[i] = 0; 
    }
@@ -140,7 +140,8 @@ void PageTable::allocate_page(unsigned long page_dir_offset, unsigned long page_
       assert(false);
    }
    //populate page table
-   unsigned long* page_table = (unsigned long*)(current_page_table->page_directory[page_dir_offset] & 0xFFFFF000);
+   unsigned long* page_table = (unsigned long*)
+      (current_page_table->page_directory[page_dir_offset] & 0xFFFFF000);
    page_table[page_table_offset] = new_frame * PAGE_SIZE | PAGE_PRESENT; 
 }
 
