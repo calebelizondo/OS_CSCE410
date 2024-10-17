@@ -3,6 +3,7 @@
 #include "console.H"
 #include "paging_low.H"
 #include "page_table.H"
+#include "vm_pool.H"
 
 PageTable * PageTable::current_page_table = nullptr;
 unsigned int PageTable::paging_enabled = 0;
@@ -150,30 +151,32 @@ void PageTable::allocate_page(unsigned long page_dir_offset, unsigned long page_
 }
 
 unsigned long* PageTable::PDE_address(unsigned long addr) {
-    unsigned long page_dir_index = addr >> 22;
-    unsigned long* pde_addr = &(current_page_table->page_directory[page_dir_index]);
-    return pde_addr;
+   unsigned long page_dir_index = addr >> 22;
+   unsigned long* pde_addr = &(current_page_table->page_directory[page_dir_index]);
+   return pde_addr;
 }
 
 unsigned long* PageTable::PTE_address(unsigned long addr) {
-    unsigned long page_dir_index = addr >> 22;
-    unsigned long page_table_index = (addr >> 12) & 0x3FF;
+   unsigned long page_dir_index = addr >> 22;
+   unsigned long page_table_index = (addr >> 12) & 0x3FF;
 
-    unsigned long* page_table = (unsigned long*)(current_page_table->page_directory[page_dir_index] & 0xFFFFF000);
-    unsigned long* pte_addr = &(page_table[page_table_index]);
+   unsigned long* page_table = (unsigned long*)(current_page_table->page_directory[page_dir_index] & 0xFFFFF000);
+   unsigned long* pte_addr = &(page_table[page_table_index]);
 
-    return pte_addr;
+   return pte_addr;
 }
 
 
 
 void PageTable::register_pool(VMPool* _vm_pool) {
+
+   //if nullptr, allocate
    if (vmpools == nullptr) {
       vmpools = new VMPool*[10];
       capacity = 10;
       vmpool_n = 0;  
    }
-   if (vmpool_n >= capacity) {
+   if (vmpool_n >= capacity) { //if our array is full, resize
       capacity *= 2; 
       VMPool** newVmpools = new VMPool*[capacity];
 
@@ -186,22 +189,19 @@ void PageTable::register_pool(VMPool* _vm_pool) {
       vmpools = newVmpools;
    }
 
-   vmpools[vmpool_n++] = _vm_pool;
+   vmpools[vmpool_n++] = _vm_pool; //register new pool
 
    //  assert(false);
    Console::puts("registered VM pool\n");
 }
 
 void PageTable::free_page(unsigned long _page_no) {
-   unsigned long page_dir_offset = _page_no >> 22; 
-   unsigned long page_table_offset = (_page_no >> 12) & 0x3FF; 
-   unsigned long* page_table = (unsigned long*)(current_page_table->page_directory[page_dir_offset] & 0xFFFFF000);
-   unsigned long* entry = &page_table[page_table_offset];
+   unsigned long * entry = PTE_address(_page_no);
    
    if (*entry & PAGE_PRESENT) {
-      ContFramePool::release_frames(*entry); //todo, only pass in necassary bits
+      ContFramePool::release_frames(*entry); 
 
-      *entry = *entry & 0xFFFFFFFE;
+      *entry = *entry & 0xFFFFFFFE; //clear entry
     	write_cr3((unsigned long)page_directory);
    } 
    Console::puts("page freed\n");

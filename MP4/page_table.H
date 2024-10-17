@@ -38,6 +38,8 @@
 /* P A G E - T A B L E  */
 /*--------------------------------------------------------------------------*/
 
+class VMPool;
+
 class PageTable {
 
 private:
@@ -67,8 +69,8 @@ private:
    static void allocate_page_table(unsigned long page_dir_offset, unsigned long page_table_offset);
    static void allocate_page(unsigned long page_dir_offset, unsigned long page_table_offset);
 
-   unsigned long * PageTable::PDE_address(unsigned long addr);
-   unsigned long * PageTable::PTE_address(unsigned long addr);
+   unsigned long * PDE_address(unsigned long addr);
+   unsigned long * PTE_address(unsigned long addr);
 
 public:
   static const unsigned int PAGE_SIZE        = Machine::PAGE_SIZE; 
@@ -106,11 +108,11 @@ public:
 
   // -- NEW IN MP4
     
-    void register_pool(VMPool * _vm_pool);
-    /* Register a virtual memory pool with the page table. */
+   void register_pool(VMPool * _vm_pool);
+   /* Register a virtual memory pool with the page table. */
     
-    void free_page(unsigned long _page_no);
-    /* If page is valid, release frame and mark page invalid. */
+   void free_page(unsigned long _page_no);
+   /* If page is valid, release frame and mark page invalid. */
 
 };
 
