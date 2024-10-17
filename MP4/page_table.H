@@ -26,6 +26,7 @@
 #include "machine.H"
 #include "exceptions.H"
 #include "cont_frame_pool.H"
+#include "vm_pool.H"
 
 /*--------------------------------------------------------------------------*/
 /* FORWARDS */
@@ -47,6 +48,10 @@ private:
   static ContFramePool * kernel_mem_pool;    /* Frame pool for the kernel memory */
   static ContFramePool * process_mem_pool;   /* Frame pool for the process memory */
   static unsigned long   shared_size;        /* size of shared address space */
+  
+  VMPool** vmpools;
+  unsigned long vmpool_n;
+  unsigned long capacity;
 
   /* DATA FOR CURRENT PAGE TABLE */
   unsigned long        * page_directory;     /* where is page directory located? */
@@ -61,6 +66,9 @@ private:
    static void handle_not_present_fault(unsigned long page_dir_offset, unsigned long page_table_offset);
    static void allocate_page_table(unsigned long page_dir_offset, unsigned long page_table_offset);
    static void allocate_page(unsigned long page_dir_offset, unsigned long page_table_offset);
+
+   unsigned long * PageTable::PDE_address(unsigned long addr);
+   unsigned long * PageTable::PTE_address(unsigned long addr);
 
 public:
   static const unsigned int PAGE_SIZE        = Machine::PAGE_SIZE; 
@@ -95,6 +103,14 @@ public:
 
   static void handle_fault(REGS * _r);
   /* The page fault handler. */
+
+  // -- NEW IN MP4
+    
+    void register_pool(VMPool * _vm_pool);
+    /* Register a virtual memory pool with the page table. */
+    
+    void free_page(unsigned long _page_no);
+    /* If page is valid, release frame and mark page invalid. */
 
 };
 
