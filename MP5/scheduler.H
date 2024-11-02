@@ -53,10 +53,107 @@
 /*--------------------------------------------------------------------------*/
 /* SCHEDULER */
 /*--------------------------------------------------------------------------*/
+class Queue {
+   private: 
+      struct ThreadNode {
+         Thread* thread;
+         ThreadNode* next;
+
+         ThreadNode(Thread* t) : thread(t), next(nullptr) {}
+      };
+   
+      ThreadNode* front;
+      ThreadNode* back;
+      unsigned int size;
+
+   public: 
+
+   Queue() : front(nullptr), back(nullptr), size(0) {}
+
+   ~Queue() {
+      while (!isEmpty()) {
+         dequeue();
+      }
+   }
+
+   bool isEmpty() const {
+      return front == nullptr;
+   }
+
+   void enqueue(Thread* thread) {
+      ThreadNode* newNode = new ThreadNode(thread);
+      if (isEmpty()) {
+         front = back = newNode;
+      } else {
+         back->next = newNode;
+         back = newNode;
+      }
+      size += 1;
+   }
+
+   Thread* dequeue() {
+      if (isEmpty()) {
+         return nullptr; 
+      }
+      ThreadNode* oldFront = front;
+      Thread* thread = front->thread;
+      front = front->next;
+      delete oldFront;
+      if (front == nullptr) {
+         back = nullptr;
+      }
+      size--;
+      return thread;
+    }
+
+    
+   Thread* peek() const {
+      return isEmpty() ? nullptr : front->thread;
+   }
+
+   unsigned int size() {
+      return size;
+   }
+
+   bool terminate(Thread* targetThread) {
+        if (isEmpty()) {
+            return false;
+        }
+
+        // ff the thread to remove is at the front
+        if (front->thread == targetThread) {
+            dequeue();
+            return true;
+        }
+
+        // find the thread in the rest of the queue
+        ThreadNode* current = front;
+        while (current->next && current->next->thread != targetThread) {
+            current = current->next;
+        }
+
+        // if we found the thread
+        if (current->next && current->next->thread == targetThread) {
+            ThreadNode* nodeToRemove = current->next;
+            current->next = nodeToRemove->next;
+            if (nodeToRemove == back) {
+                back = current; 
+            }
+            delete nodeToRemove;
+            size--;
+            return true;
+        }
+
+        // thread not found
+        return false;
+    }
+
+};
 
 class Scheduler {
 
   /* The scheduler may need private members... */
+  Queue threadQueue;
   
 public:
 
