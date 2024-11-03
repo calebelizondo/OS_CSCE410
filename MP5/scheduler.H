@@ -64,11 +64,11 @@ class Queue {
    
       ThreadNode* front;
       ThreadNode* back;
-      unsigned int size;
+      unsigned int _size;
 
    public: 
 
-   Queue() : front(nullptr), back(nullptr), size(0) {}
+   Queue() : front(nullptr), back(nullptr), _size(0) {}
 
    ~Queue() {
       while (!isEmpty()) {
@@ -80,6 +80,7 @@ class Queue {
       return front == nullptr;
    }
 
+   //add thread to queue
    void enqueue(Thread* thread) {
       ThreadNode* newNode = new ThreadNode(thread);
       if (isEmpty()) {
@@ -88,9 +89,9 @@ class Queue {
          back->next = newNode;
          back = newNode;
       }
-      size += 1;
+      _size += 1;
    }
-
+   //remove thread from queue
    Thread* dequeue() {
       if (isEmpty()) {
          return nullptr; 
@@ -102,19 +103,15 @@ class Queue {
       if (front == nullptr) {
          back = nullptr;
       }
-      size--;
+      _size--;
       return thread;
     }
 
-    
-   Thread* peek() const {
-      return isEmpty() ? nullptr : front->thread;
-   }
-
    unsigned int size() {
-      return size;
+      return _size;
    }
 
+   //remove from queue, regardless of position 
    bool terminate(Thread* targetThread) {
         if (isEmpty()) {
             return false;
@@ -140,7 +137,7 @@ class Queue {
                 back = current; 
             }
             delete nodeToRemove;
-            size--;
+            _size--;
             return true;
         }
 
